@@ -1,0 +1,139 @@
+//---------------------------------------------------
+//EnvelopeGenerator.cpp - Last update: 19 Mar 2015 - Started: 25 Feb 2015.
+//---------------------------------------------------
+//19 Mar 2015: Moved the Note ON LED to the EnvelopeGenerator Class.
+//---------------------------------------------------
+//09 Mar 2015: Calibrated the constants to define offset Xo and coefficient Cf
+//as suggested by Will Pirkle's book. The Envelope Generator is working fine,
+//although further adjustments may be needed.
+//---------------------------------------------------
+//EnvelopeGenerator calculates ADSR control values used by the Filter and Amplifier.
+//-----------------------------------------------------------
+
+#include <Arduino.h>
+#include "EnvelopeGenerator.h"
+#include <math.h>
+
+EnvelopeGenerator::EnvelopeGenerator(){
+ start();
+}
+
+void EnvelopeGenerator::start(){
+ mState = _OFF;
+ mTrigger = OFF;
+ mGate = OFF;
+ mOnCount = 0;
+ mOutput = 0.0;
+ setAttack(0);
+ setDecay(0);
+ setSustain(127);
+ setRelease(0);
+}
+
+float EnvelopeGenerator::exp(float x){
+  return pow(eBase, x);
+}
+
+void EnvelopeGenerator::setUpdateRate(float updateRate){
+  mUpdateRate = updateRate;
+}
+
+void EnvelopeGenerator::setTrigger(){
+  mTrigger = ON;
+}
+
+void EnvelopeGenerator::setGateON(){
+  mOnCount++;
+  if(mOnCount > 0){
+    mGate = ON;
+#if !defined(__IMXRT1062__)
+   digitalWrite(LED, HIGH);
+#endif
+  }
+}
+
+void EnvelopeGenerator::setGateOFF(){
+  if(mOnCount > 0){
+    mOnCount--;
+  }
+  if(mOnCount == 0){
+    mGate = OFF;
+#if !defined(__IMXRT1062__)
+   digitalWrite(LED, LOW);
+#endif
+  }
+}
+
+void EnvelopeGenerator::setAttack(int attack){
+  mAttack = float(attack + 1) * 10.0;
+  mAttackCf = exp(ECOA / mAttack);
+  mAttackXo = (1.0 + TCOA) * (1.0 - mAttackCf);
+}
+
+void EnvelopeGenerator::setDecay(int decay){
+  mDecay = float(decay) * 100.0 +1.0;
+  mDecayCf = exp(ECODR / mDecay);
+  mDecayXo = (mSustain - TCODR) * (1.0 - mDecayCf);
+}
+
+void EnvelopeGenerator::setSustain(int sustain){
+  mSustain = float(sustain) / 127.0;
+  mDecayXo = (mSustain - TCODR) * (1.0 - mDecayCf);
+}
+
+void EnvelopeGenerator::setRelease(int release){
+  mRelease = float(release + 1) * 100.0;
+  mReleaseCf = exp(ECODR / mRelease);
+  mReleaseXo = -TCODR * (1.0 - mReleaseCf);
+}
+
+void EnvelopeGenerator::setVolume(int volume){
+  mVolume = float(volume) / 127.0;
+  lVolume = FixedPoint::convertToFP(mVolume);
+}
+
+float EnvelopeGenerator::update(){
+  if(mTrigger){
+    mState = ATTACK;
+    mGate = ON;
+    mTrigger = OFF;
+  }
+  if(mGate == OFF){
+    mState = RELEASE;
+  }
+  switch(mState){
+    case _OFF:{
+      mOutput = 0.0;
+      break; 
+    }
+    case ATTACK:{
+      mOutput = mAttackXo + mOutput * mAttackCf;
+      if(mOutput >= 1.0){
+        mOutput = 1.0;
+        mState = DECAY;
+      }
+      break; 
+    }
+    case DECAY:{
+      mOutput = mDecayXo + mOutput * mDecayCf;
+      if(mOutput <= mSustain){
+        mOutput = mSustain;
+        mState = SUSTAIN;
+      }
+      break; 
+    }
+    case SUSTAIN:{
+      mOutput = mSustain;
+      break; 
+    }
+    case RELEASE:{
+      mOutput = mReleaseXo + mOutput * mReleaseCf;
+      if(mOutput <= 0.0){
+        mOutput = 0.0;
+        mState = _OFF;
+      }
+      break; 
+    }
+  }
+  return mOutput;
+}
