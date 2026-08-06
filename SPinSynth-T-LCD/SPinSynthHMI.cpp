@@ -163,8 +163,6 @@ void SPinSynthHMI::begin(bool initializeDisplay) {
   if(initializeDisplay){
     mDisplay.init();
     mDisplay.backlight();
-    // BSS138 validation stage: enable the LCD backlight after the unlit LCD
-    // and bidirectional I2C path completed a stable ten-minute test.
     showHome();
   }
 }

@@ -30,7 +30,6 @@ public:
 private:
   void advanceControls();
   void renderNextBlock();
-  void renderDiagnosticTone(audio_block_t* block);
   int16_t convertToAudioSample(long sample);
 
   Oscillator& mOscillator;
@@ -41,8 +40,6 @@ private:
   DoubleBuffer mAmplifierBuffer;
 
   static const int CONTROL_UPDATE_PERIOD_US = 250;
-  static const int DIAGNOSTIC_TONE_MODE = 0;
-  static const int DIAGNOSTIC_TONE_SECONDS = 8;
 };
 
 #endif

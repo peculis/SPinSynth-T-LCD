@@ -1,13 +1,40 @@
 //----------------------------------------------------------------------------------
 //SPinSynth-T-LCD - Monophonic Software Synthesizer Developed by Ricardo Peculis. 
-//Last update: 28 June 2026 - Started: 22 Feb 2015
-//This last update ported the software from Teensy 3.1 to Teensy 4.0 and implemented the HMI
-//based on an I2C LCD 16x2 and two Rotary Encoders (see the HMI Architecture documentation). All 
-//the previous HMI functionality based on MIDI CC Messages was preserved. The software was tested
-//without the Audio Adapter using USB-Audio and Logic Pro on Mac OS (see documentation for settings).
-//Porting to Teensy 4.0 replaced the 12 bit DAC with 16 bit audio interface provided by PJRC Audio
-//Library, implemented in the SPinSynthAudio component and it is ready for USB-Audio and the Audio 
-//Adapter. The HMI based on LCD + Rotary Encoders was implemented in the SPinSynthHMI component.
+//Last update: 6 August 2026 - Started: 22 Feb 2015
+//This version runs on Teensy 4.0 with simultaneous USB Audio and PJRC Audio Shield Rev D2 output.
+//The HMI uses a native 3.3 V KEYES I2C LCD 16x2 and two rotary encoders. MIDI-DIN and USB-MIDI
+//remain available. See HARDWARE.md for the validated hardware configuration and its history.
+//----------------------------------------------------------------------------------
+//6 August 2026 - Established the new tested hardware and software baseline.
+//
+//Hardware changes:
+//- Installed and validated a PJRC Audio Shield Rev D2. The synth now plays simultaneously through
+//  USB Audio and the Shield headphone output. SGTL5000 headphone volume is initialized to 0.85.
+//- Replaced the former 5 V LCD arrangement with a KEYES DC 3.3 V LCD1602 I2C module at address
+//  0x27. It connects directly to Teensy pins 18 (SDA) and 19 (SCL), without a logic-level shifter.
+//- The LCD has no local I2C pull-ups; the Audio Shield provides 2.2 kOhm pull-ups to 3.3 V. SDA
+//  and SCL measured approximately 3.25 V while the HMI was operating.
+//- Removed the HW-024/BSS138 level-shifter arrangement. Investigation of the earlier 5 V LCD
+//  configuration revealed reversed HW-024 side assumptions and a possible back-powering path.
+//- Replaced the intermittent micro-USB cable and cleaned the connectors with isopropyl alcohol.
+//  This eliminated USB enumeration losses observed in macOS Audio MIDI Setup and Logic Pro.
+//
+//Software changes:
+//- Added the SPinSynthAudio Teensy AudioStream interface and routed its mono synth output to both
+//  channels of USB Audio and both channels of the Audio Shield I2S output.
+//- Added the LCD/rotary-encoder HMI while preserving MIDI CC control, USB-MIDI and MIDI-DIN.
+//- Corrected EnvelopeGenerator initialization and amplifier sustain behavior. The MIDI-DIN handler
+//  ignores the controller's unsolicited CC 82 message so it cannot mute amplifier sustain; USB-MIDI
+//  retains the complete CC mapping.
+//- Corrected the duplicate PULSE parameter navigation while retaining the dedicated pulse-width edit.
+//- Added CrashReport output, built-in LED heartbeat, startup I2C status checks, uptime and CPU
+//  temperature reporting for operational fault diagnosis.
+//- Removed the temporary continuous-tone, USB-only and HMI polling test paths after validation.
+//
+//Validation result:
+//The production configuration completed a continuous test exceeding five hours with MIDI-DIN,
+//USB Audio, Audio Shield audio, LCD/HMI and heartbeat operating normally. CPU temperature was
+//54.3 degrees C. The complete hardware investigation and baseline are documented in HARDWARE.md.
 //----------------------------------------------------------------------------------
 //SPinSynth-T - Monophonic Software Synthesizer Developed by Ricardo Peculis. 
 //Last update: 9 June 2026 - Started: 22 Feb 2015
@@ -179,25 +206,17 @@ enum ModWheelFunction {
  Filter vaFilter;
  Amplifier vaAmplifier;
 
-// Send the synth simultaneously to USB Audio and the installed Audio Shield.
-#define SPINSYNTH_USB_ONLY_TEST 1
-#define SPINSYNTH_HMI_POLL_TEST 1
-
  SPinSynthAudio spinSynthAudio(vaOscillator, vaFilter, vaAmplifier);
 #if !defined(USB_AUDIO) && !defined(USB_MIDI_AUDIO_SERIAL) && !defined(USB_MIDI16_AUDIO_SERIAL)
 #error "SPinSynth-T requires Tools > USB Type to include Audio, such as Serial + MIDI + Audio."
 #endif
  AudioOutputUSB usbAudioOutput;
  AudioOutputI2S shieldAudioOutput;
-#if !SPINSYNTH_USB_ONLY_TEST
  AudioControlSGTL5000 audioShield;
-#endif
  AudioConnection patchCordUsbLeft(spinSynthAudio, 0, usbAudioOutput, 0);
  AudioConnection patchCordUsbRight(spinSynthAudio, 0, usbAudioOutput, 1);
-#if !SPINSYNTH_USB_ONLY_TEST
  AudioConnection patchCordShieldLeft(spinSynthAudio, 0, shieldAudioOutput, 0);
  AudioConnection patchCordShieldRight(spinSynthAudio, 0, shieldAudioOutput, 1);
-#endif
  
  const float MIDI_CC_MAX_VALUE = 127.0;
  const float CENTER_PULSE_WIDTH = 0.5;
@@ -809,9 +828,8 @@ void setup() {
   // Audio Shield over I2S. Extra blocks cover both output queues.
   AudioMemory(24);
   spinSynthAudio.begin();
-#if !SPINSYNTH_USB_ONLY_TEST
   const bool audioShieldEnabled = audioShield.enable();
-  const bool audioShieldVolumeSet = audioShield.volume(0.25);
+  const bool audioShieldVolumeSet = audioShield.volume(0.85);
   const bool audioShieldHeadphoneSelected =
     audioShield.headphoneSelect(AUDIO_HEADPHONE_DAC);
   const bool audioShieldHeadphoneUnmuted = audioShield.unmuteHeadphone();
@@ -823,7 +841,6 @@ void setup() {
   Serial.print(audioShieldHeadphoneSelected ? "OK" : "FAILED");
   Serial.print(", unmute: ");
   Serial.println(audioShieldHeadphoneUnmuted ? "OK" : "FAILED");
-#endif
 
   //MIDI Setup
   // Initiate MIDI communications, listen to all channels
@@ -851,12 +868,10 @@ void setup() {
   Serial.print("LCD I2C 0x27 status: ");
   Serial.println(lcdI2cStatus);
 
-#if !SPINSYNTH_USB_ONLY_TEST
   Wire.beginTransmission(0x0A);
   const uint8_t audioShieldI2cStatus = Wire.endTransmission();
   Serial.print("Audio Shield I2C 0x0A status: ");
   Serial.println(audioShieldI2cStatus);
-#endif
 
   ApplySynthParameter(
     SPinSynthHMI::PARAM_MASTER_VOLUME,
@@ -933,8 +948,6 @@ void setup() {
 }
 
 void loop(){
-
-#if SPINSYNTH_HMI_POLL_TEST
   static unsigned long lastHeartbeatMs = 0;
   static unsigned long lastTemperatureMs = 0;
   static bool heartbeatState = false;
@@ -954,14 +967,6 @@ void loop(){
     Serial.print(tempmonGetTemp(), 1);
     Serial.println(" C");
   }
-
-  MIDI.read();
-#if defined(MIDI_INTERFACE)
-  usbMIDI.read();
-#endif
-  hmi.update();
-  return;
-#endif
 
   MIDI.read();
 #if defined(MIDI_INTERFACE)

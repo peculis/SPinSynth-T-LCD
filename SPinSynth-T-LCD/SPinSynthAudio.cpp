@@ -71,38 +71,10 @@ int16_t SPinSynthAudio::convertToAudioSample(long sample) {
   return int16_t(audioSample);
 }
 
-void SPinSynthAudio::renderDiagnosticTone(audio_block_t* block) {
-  static uint32_t diagnosticPhase = 0;
-  const uint32_t diagnosticPhaseIncrement = uint32_t(440.0f * 4294967296.0f / AUDIO_SAMPLE_RATE_EXACT);
-
-  for(int i = 0; i < AUDIO_BLOCK_SAMPLES; i++){
-    block->data[i] = (diagnosticPhase & 0x80000000) ? 8000 : -8000;
-    diagnosticPhase += diagnosticPhaseIncrement;
-  }
-}
-
 void SPinSynthAudio::update(void) {
   audio_block_t* block = allocate();
-  static int diagnosticBlocks = int((AUDIO_SAMPLE_RATE_EXACT * DIAGNOSTIC_TONE_SECONDS) / AUDIO_BLOCK_SAMPLES);
 
   if(block == NULL){
-    return;
-  }
-
-  // Diagnostic mode 1 runs continuously so USB Audio can be configured in Logic.
-  // Diagnostic mode 2 keeps the original startup-only tone, then returns to synth audio.
-
-  if(DIAGNOSTIC_TONE_MODE == 1){
-    renderDiagnosticTone(block);
-    transmit(block);
-    release(block);
-    return;
-  }
-  else if(DIAGNOSTIC_TONE_MODE == 2 && diagnosticBlocks > 0){
-    renderDiagnosticTone(block);
-    diagnosticBlocks--;
-    transmit(block);
-    release(block);
     return;
   }
 
