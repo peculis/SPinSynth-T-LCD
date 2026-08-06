@@ -1,16 +1,24 @@
 # SPinSynth-T-LCD
 
-SPinSynth-T-LCD is a monophonic software synthesizer for the Teensy 4.0. It
-combines a custom synthesis engine with the PJRC Teensy Audio Library, USB MIDI,
-USB Audio, a 16x2 I2C LCD, and two rotary encoders.
+SPinSynth-T-LCD is a monophonic software synthesizer for Teensy 4.0. It combines Ricardo Peculis's custom synthesis engine with the PJRC Teensy Audio Library, MIDI-DIN, USB MIDI, simultaneous USB/Audio-Shield audio, and a local LCD/rotary-encoder HMI.
 
-The current baseline was tested without an Audio Adapter: MIDI is received over
-USB and the mono synth output is sent to both channels of the Teensy USB Audio
-device. Logic Pro on macOS was used as the host.
+> **Project status:** experimental, working hardware baseline. This is not a finished product.
 
-> **Project status:** experimental, working hardware baseline. This is not a
-> finished product. The USB-Audio path is tested; the optional SGTL5000 Audio
-> Adapter path is implemented but is not part of this baseline.
+## Validated hardware baseline
+
+- Teensy 4.0 at 600 MHz
+- PJRC Audio Shield Rev D2
+- KEYES DC 3.3 V LCD1602 I2C module at address `0x27`
+- Two quadrature rotary encoders with push-buttons
+- Isolated 5-pin MIDI-DIN input
+- USB configured as **Serial + MIDI + Audio**
+- Simultaneous stereo USB Audio and Audio Shield output carrying the mono synth signal
+
+The 3.3 V LCD connects directly to Teensy pins 18 and 19. No I2C logic-level shifter is used. The LCD has no local pull-ups; the Audio Shield supplies 2.2 kΩ pull-ups to 3.3 V.
+
+![Validated SPinSynth-T-LCD hardware](docs/images/SPinSynth-T-LCD-03-Audio-Shield-and-LCD-3.3V.jpeg)
+
+See [docs/HARDWARE.md](docs/HARDWARE.md) for pin assignments, controls, electrical details, and the history of the LCD, level-shifter, Audio Shield, and USB investigations.
 
 ## Features
 
@@ -21,70 +29,38 @@ device. Logic Pro on macOS was used as the host.
 - Resonant filter
 - Separate amplifier and filter ADSR envelopes
 - Portamento, pitch bend, velocity, master tuning, and master volume
-- USB MIDI plus 5-pin DIN MIDI input
-- Stereo USB Audio output carrying the same mono signal on both channels
+- USB MIDI plus 5-pin MIDI-DIN input
+- Simultaneous USB Audio and PJRC Audio Shield Rev D2 output
 - 16x2 LCD and two-encoder parameter interface
-
-## Hardware
-
-- Teensy 4.0
-- 16x2 HD44780-compatible LCD with an I2C backpack at address `0x27`
-- Two quadrature rotary encoders with push buttons
-- Optional: 5-pin DIN MIDI input hardware
-- Optional and currently untested: PJRC Teensy Audio Adapter
-
-See [docs/HARDWARE.md](docs/HARDWARE.md) for the pin assignment and controls.
+- Heartbeat, CrashReport, uptime, temperature, and startup I2C diagnostics
 
 ## Software dependencies
 
-Install Teensy support in the Arduino IDE, including the libraries bundled with
-Teensyduino. The sketch also uses:
-
-- PJRC Audio
-- PJRC Encoder
+- Arduino IDE with Teensy support
+- PJRC Audio and Encoder libraries
 - FortySevenEffects MIDI Library
-- A `LiquidCrystal_I2C` library exposing
-  `LiquidCrystal_I2C(address, columns, rows)`, `init()`, and `backlight()`
+- Frank de Brabander/Marco Schwartz `LiquidCrystal_I2C` library exposing `LiquidCrystal_I2C(address, columns, rows)`, `init()`, and `backlight()`
 
-The precise IDE, Teensy core, and third-party library versions used for the
-hardware test were not captured. Record them in
-[docs/TESTED_BASELINE.md](docs/TESTED_BASELINE.md) before tagging a release.
+The validated workstation used Teensy board package 1.62.0, MIDI Library 5.0.2, LiquidCrystal I2C 1.1.2, and macOS 15.7.3.
 
 ## Build and upload
 
-1. Open `SPinSynth-T-LCD/SPinSynth-T-LCD.ino` in the Arduino IDE.
+1. Open `SPinSynth-T-LCD/SPinSynth-T-LCD.ino` in Arduino IDE.
 2. Select **Teensy 4.0** under **Tools > Board**.
 3. Select **Serial + MIDI + Audio** under **Tools > USB Type**.
-4. Compile and upload.
-5. Open the Serial Monitor at 9600 baud if startup diagnostics are needed.
+4. Select 600 MHz CPU speed.
+5. Compile and upload.
+6. Open Serial Monitor at 9600 baud for startup and operational diagnostics.
 
-The sketch intentionally stops compilation when the selected USB type does not
-include Audio.
+The sketch stops compilation when the selected USB type does not include Audio.
 
-## Tested USB-Audio setup
+After startup, confirm LCD I2C address `0x27` and SGTL5000 address `0x0A` both report status `0`. The SGTL5000 headphone volume is initialized to `0.85`; begin headphone tests with the HMI volume low.
 
-The checked-in configuration uses:
+## Tested baseline
 
-```cpp
-#define SPINSYNTH_USB_ONLY_TEST 1
-#define SPINSYNTH_HMI_POLL_TEST 1
-```
+The production configuration completed a continuous test exceeding five hours with MIDI-DIN, USB Audio, Audio Shield audio, LCD/HMI, and heartbeat operating normally. CPU temperature reached 54.3 °C. After removal of temporary test code, the production build completed an additional ten-minute CAT with all functions correct at 57.5 °C on a 28 °C day.
 
-`SPINSYNTH_USB_ONLY_TEST` keeps the SGTL5000 Audio Adapter disabled and routes
-audio through USB. Do not change it when reproducing the baseline.
-
-After upload:
-
-1. Connect the Teensy directly to the Mac by USB.
-2. Select the Teensy as a stereo audio input in the host or DAW.
-3. Select the Teensy MIDI port as the MIDI destination.
-4. Play a note and confirm that the same mono signal appears on both USB input
-   channels.
-5. Confirm that the LCD responds to both encoders and that the Serial Monitor
-   reports the LCD at I2C address `0x27`.
-
-More detail and the release checklist are in
-[docs/TESTED_BASELINE.md](docs/TESTED_BASELINE.md).
+See [docs/TESTED_BASELINE.md](docs/TESTED_BASELINE.md) for the complete regression checklist.
 
 ## Repository layout
 
@@ -99,16 +75,12 @@ SPinSynth-T-LCD/
     └── synthesis engine sources
 ```
 
-The nested sketch directory is intentional: Arduino requires the primary
-`.ino` file to match its containing directory.
+The nested sketch directory is intentional: Arduino requires the primary `.ino` file to match its containing directory.
 
 ## Contributing
 
-Please keep changes small and test the USB-Audio baseline after modifications.
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+Please keep changes small and repeat the regression checklist after modifications. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-No open-source license has been selected yet. Until the copyright owner adds a
-license, the source is provided for viewing only under standard copyright law.
-
+No open-source license has been selected yet. Until the copyright owner adds a license, the source is provided for viewing only under standard copyright law.
