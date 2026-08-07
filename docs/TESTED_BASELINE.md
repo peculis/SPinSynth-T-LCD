@@ -16,6 +16,9 @@
 
 ## Validation results
 
+- On 6-7 August 2026, the firmware tagged `V1.0` ran continuously for more than five hours without any failure or USB dropout.
+- Throughout the tagged V1.0 endurance test, MIDI, USB Audio, Audio Shield audio, LCD/HMI, and heartbeat remained fully operational.
+- The maximum reported CPU temperature during the final V1.0 validation was approximately 58.1 °C.
 - Continuous production-hardware test exceeded five hours.
 - MIDI-DIN, USB Audio, Audio Shield audio, LCD/HMI, and heartbeat remained operational.
 - CPU temperature was 54.3 °C during the five-hour run.
