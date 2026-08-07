@@ -27,6 +27,35 @@
 - CPU temperature during final CAT was 57.5 °C at approximately 28 °C ambient temperature.
 - USB dropouts ceased after replacing the micro-USB cable and cleaning its connectors.
 
+## V1.1 stereo reverb validation
+
+PJRC `AudioEffectFreeverbStereo` was added as a global effect after the monophonic
+synth engine. Two output mixers combine the original dry signal with Freeverb's
+wet left and right outputs before routing the same stereo result to USB Audio and
+the Audio Shield. MIDI CC 36 and the HMI `REVERB MIX` parameter control only the
+dry/wet mixer gains; Freeverb continues processing at every mix setting.
+
+The reverb was measured on Teensy 4.0 at 600 MHz using Teensy Audio Library 1.3
+from Teensyduino 1.62.0. Room size and damping were both fixed at `0.5`.
+
+| Test condition | Total Audio CPU | Reverb CPU |
+| --- | ---: | ---: |
+| Startup, default 0% wet | 5.98% | 3.59% |
+| Notes playing, 0% wet | 6.18% | 3.76% |
+| No notes, 50% wet | 6.26% | 3.76% |
+| Notes playing, 50% wet | 6.86% | 4.35% |
+| Notes playing, 100% wet | 6.25% | 3.75% |
+| Maximum observed | 7.00% | 4.49% |
+
+- CPU temperature remained between 57.5 °C and 58.1 °C during the measurements.
+- Changing the dry/wet mix produced no meaningful CPU change; the small variation
+  followed active versus silent audio blocks and normal scheduling variation.
+- Stereo Freeverb uses approximately 51 KB of additional static RAM1 for its delay
+  buffers. The compiled build retained 308,224 bytes free in RAM1 and 497,280 bytes
+  free in RAM2.
+- The temporary CPU diagnostic fields were removed after measurement. Normal uptime
+  and temperature reporting remain enabled.
+
 ## Captured toolchain
 
 | Component | Version |

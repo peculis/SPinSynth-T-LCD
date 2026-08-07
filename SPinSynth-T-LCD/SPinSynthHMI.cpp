@@ -29,6 +29,8 @@ SPinSynthHMI::SPinSynthHMI(LiquidCrystal_I2C& display,
       100, 100, 0, 127, 1, 8, VISIBLE_ALWAYS},
     {"MASTER TUNING", "Tune", GROUP_GLOBAL, TYPE_MASTER_TUNE,
       0, 0, -100, 100, 1, 10, VISIBLE_ALWAYS},
+    {"REVERB MIX", "Reverb", GROUP_GLOBAL, TYPE_PERCENT,
+      0, 0, 0, 100, 1, 10, VISIBLE_ALWAYS},
     {"PORTAMENTO", "Glide", GROUP_GLOBAL, TYPE_MILLISECONDS,
       0, 0, 0, 254, 2, 16, VISIBLE_ALWAYS},
     {"MOD WHEEL", "Func", GROUP_GLOBAL, TYPE_MOD_WHEEL_FUNCTION,
@@ -439,6 +441,9 @@ void SPinSynthHMI::formatValueRow(char* row, size_t rowSize) const {
       break;
     case TYPE_BIPOLAR:
       snprintf(row, rowSize, "Amount %+d %s", parameter.value, mode);
+      break;
+    case TYPE_PERCENT:
+      snprintf(row, rowSize, "%s %03d%% %s", parameter.label, parameter.value, mode);
       break;
     case TYPE_NORMAL:
     default:

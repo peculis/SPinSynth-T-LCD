@@ -1,9 +1,15 @@
 //----------------------------------------------------------------------------------
 //SPinSynth-T-LCD - Monophonic Software Synthesizer Developed by Ricardo Peculis. 
-//Last update: 6 August 2026 - Started: 22 Feb 2015
+//Last update: 7 August 2026 - Started: 22 Feb 2015
 //This version runs on Teensy 4.0 with simultaneous USB Audio and PJRC Audio Shield Rev D2 output.
 //The HMI uses a native 3.3 V KEYES I2C LCD 16x2 and two rotary encoders. MIDI-DIN and USB-MIDI
 //remain available. See HARDWARE.md for the validated hardware configuration and its history.
+//----------------------------------------------------------------------------------
+//7 August 2026 - Began V1.1 development from the tagged V1.0 baseline. Added PJRC
+//AudioEffectFreeverbStereo as a global effect with identical stereo output through USB Audio and
+//the Audio Shield. MIDI CC 36 and the HMI REVERB MIX parameter control the dry/wet balance from
+//0 to 100 percent. The default is fully dry to preserve the V1.0 startup sound. Freeverb room size
+//and damping initially use conservative fixed values of 0.5.
 //----------------------------------------------------------------------------------
 //6 August 2026 - Established the new tested hardware and software baseline.
 //
@@ -76,7 +82,7 @@
 //Bank 1 P9  - CC#17 - Oscillator LFO Amount
 //Bank 1 P10 - CC#91 - Oscillator LFO Waveshape: SINE, SAW, INVERTED-SAW, SQUARE/PULSE
 //Bank 2 P1  - CC#35 - Portamento (Glide)
-//Bank 2 P2  - CC#36 - NOT USED
+//Bank 2 P2  - CC#36 - Reverb Dry/Wet Mix
 //Bank 2 P3  - CC#37 - SAW-X-TACTOR
 //Bank 2 P4  - CC#38 - Oscillator PULSE-WIDTH
 //Bank 2 P5  - CC#39 - Oscillator Sub-Factor Amount
@@ -213,10 +219,18 @@ enum ModWheelFunction {
  AudioOutputUSB usbAudioOutput;
  AudioOutputI2S shieldAudioOutput;
  AudioControlSGTL5000 audioShield;
- AudioConnection patchCordUsbLeft(spinSynthAudio, 0, usbAudioOutput, 0);
- AudioConnection patchCordUsbRight(spinSynthAudio, 0, usbAudioOutput, 1);
- AudioConnection patchCordShieldLeft(spinSynthAudio, 0, shieldAudioOutput, 0);
- AudioConnection patchCordShieldRight(spinSynthAudio, 0, shieldAudioOutput, 1);
+ AudioEffectFreeverbStereo reverb;
+ AudioMixer4 reverbMixerLeft;
+ AudioMixer4 reverbMixerRight;
+ AudioConnection patchCordReverbInput(spinSynthAudio, 0, reverb, 0);
+ AudioConnection patchCordDryLeft(spinSynthAudio, 0, reverbMixerLeft, 0);
+ AudioConnection patchCordDryRight(spinSynthAudio, 0, reverbMixerRight, 0);
+ AudioConnection patchCordWetLeft(reverb, 0, reverbMixerLeft, 1);
+ AudioConnection patchCordWetRight(reverb, 1, reverbMixerRight, 1);
+ AudioConnection patchCordUsbLeft(reverbMixerLeft, 0, usbAudioOutput, 0);
+ AudioConnection patchCordUsbRight(reverbMixerRight, 0, usbAudioOutput, 1);
+ AudioConnection patchCordShieldLeft(reverbMixerLeft, 0, shieldAudioOutput, 0);
+ AudioConnection patchCordShieldRight(reverbMixerRight, 0, shieldAudioOutput, 1);
  
  const float MIDI_CC_MAX_VALUE = 127.0;
  const float CENTER_PULSE_WIDTH = 0.5;
@@ -231,6 +245,7 @@ enum ModWheelFunction {
  const byte CC_MASTER_VOLUME = 7;
  const byte CC_MASTER_TUNE = 41;
  const byte CC_MOD_WHEEL_FUNCTION = 18;
+ const byte CC_REVERB_MIX = 36;
 
  // Oscillator MIDI controls
  const byte CC_OSC_LFO_RATE = 16;
@@ -357,6 +372,15 @@ enum ModWheelFunction {
       }
       ApplyModWheel(mModWheelValue);
       break;
+    case SPinSynthHMI::PARAM_REVERB_MIX:{
+      const float wetGain = float(value) / 100.0f;
+      const float dryGain = 1.0f - wetGain;
+      reverbMixerLeft.gain(0, dryGain);
+      reverbMixerLeft.gain(1, wetGain);
+      reverbMixerRight.gain(0, dryGain);
+      reverbMixerRight.gain(1, wetGain);
+      break;
+    }
     case SPinSynthHMI::PARAM_OSC_WAVEFORM:
       switch(value){
         case 0:
@@ -677,6 +701,11 @@ void HandleControlChange(byte channel, byte number, byte value) {
         SPinSynthHMI::PARAM_MOD_WHEEL_FUNCTION,
         modWheelFunctionFromMidi(value));
       break;
+    case CC_REVERB_MIX:
+      SetSynthParameter(
+        SPinSynthHMI::PARAM_REVERB_MIX,
+        int((100L * long(value) + 63L) / 127L));
+      break;
     case CC_OSC_LFO_RATE:
       SetSynthParameter(SPinSynthHMI::PARAM_OSC_LFO_FREQUENCY, value);
       break;
@@ -824,9 +853,15 @@ void setup() {
   pinMode(SHARP, OUTPUT);
 #endif
 
-  // The synth stream is sent simultaneously to USB Audio and to the SGTL5000
-  // Audio Shield over I2S. Extra blocks cover both output queues.
-  AudioMemory(24);
+  // The dry synth and stereo Freeverb output are mixed and sent simultaneously
+  // to USB Audio and to the SGTL5000 Audio Shield over I2S.
+  AudioMemory(32);
+  for(int channel = 0; channel < 4; channel++){
+    reverbMixerLeft.gain(channel, 0.0f);
+    reverbMixerRight.gain(channel, 0.0f);
+  }
+  reverb.roomsize(0.5f);
+  reverb.damping(0.5f);
   spinSynthAudio.begin();
   const bool audioShieldEnabled = audioShield.enable();
   const bool audioShieldVolumeSet = audioShield.volume(0.85);
@@ -885,6 +920,9 @@ void setup() {
   ApplySynthParameter(
     SPinSynthHMI::PARAM_MOD_WHEEL_FUNCTION,
     hmi.getParameterValue(SPinSynthHMI::PARAM_MOD_WHEEL_FUNCTION));
+  ApplySynthParameter(
+    SPinSynthHMI::PARAM_REVERB_MIX,
+    hmi.getParameterValue(SPinSynthHMI::PARAM_REVERB_MIX));
   ApplySynthParameter(
     SPinSynthHMI::PARAM_OSC_WAVEFORM,
     hmi.getParameterValue(SPinSynthHMI::PARAM_OSC_WAVEFORM));
