@@ -112,8 +112,10 @@ The nested sketch directory is intentional: Arduino requires the primary `.ino` 
 
 ## Contributing
 
-Please keep changes small and repeat the regression checklist after modifications. See [CONTRIBUTING.md](CONTRIBUTING.md).
+This repository is maintained by Ricardo Peculis. External pull requests and contributions are not currently accepted. You are welcome to fork and adapt the software under MIT. See the [maintenance and reuse policy](CONTRIBUTING.md).
 
 ## License
 
-No open-source license has been selected yet. Until the copyright owner adds a license, the source is provided for viewing only under standard copyright law.
+The project software and associated documentation are licensed under the [MIT License](LICENSE), copyright © 2015–2026 Ricardo Peculis. Reuse, modification and commercial distribution are permitted subject to preserving the copyright and license notice.
+
+Third-party libraries retain their own licenses and copyright notices; this license does not relicense those dependencies. See [licensing scope and third-party notices](NOTICE.md).
