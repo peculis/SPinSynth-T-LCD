@@ -7,7 +7,7 @@ the tested USB-Audio behavior while making changes.
 
 1. Keep unrelated formatting changes out of the patch.
 2. Build for Teensy 4.0 with **Serial + MIDI + Audio** selected.
-3. Run the checklist in `docs/TESTED_BASELINE.md` on hardware.
+3. Run the checklist in `docs/cat/TESTED_BASELINE.md` on hardware.
 4. State the Arduino IDE, Teensy core, and library versions used.
 5. Describe the connected hardware and audio/MIDI host.
 

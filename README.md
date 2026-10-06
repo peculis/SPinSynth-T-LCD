@@ -4,6 +4,22 @@ SPinSynth-T-LCD is a monophonic software synthesizer for Teensy 4.0. It combines
 
 > **Project status:** experimental, working hardware baseline. This is not a finished product.
 
+## Project history and credits
+
+Ricardo Peculis began SPinSynth in February 2015 and developed the original SPinSynth-T monophonic synthesis engine for Teensy 3.1. Its oscillator, filter, amplifier, ADSR envelopes, LFOs and control logic are his custom implementation. The original instrument used the Teensy DAC and MIDI controls.
+
+In 2026, SPinSynth-T-LCD brought that engine to Teensy 4.0. The `SPinSynthAudio` adapter integrates it with PJRC AudioStream and 16-bit audio output; the `SPinSynthHMI` component adds the LCD and two rotary encoders. The validated V1.0 baseline added simultaneous USB Audio and Audio Shield output. V1.1 adds stereo Freeverb, controlled from MIDI and the HMI.
+
+This work was developed through Ricardo's hardware assembly, musical evaluation and Compile, Apply, Test (CAT) direction, in collaboration with **OpenAI Codex** for source analysis, implementation assistance, debugging, build checks and documentation. Physical acceptance and reported hardware measurements came from Ricardo's testing. The documented refinements include envelope initialization and sustain fixes, DIN CC82 handling, pulse-width navigation, startup diagnostics and the stereo audio routing. They do not establish a general DSP speedup claim.
+
+Acknowledgements:
+
+- **Paul Stoffregen, PJRC and contributors:** Teensy platform, Teensy Audio Library (including AudioStream and stereo Freeverb), Encoder library and Teensy USB support.
+- **FortySevenEffects and contributors:** MIDI Library used for the DIN MIDI interface.
+- **Frank de Brabander and Marco Schwartz:** LiquidCrystal_I2C library used for the LCD interface.
+
+SPinMicroDexed is a separate MicroDexed-based FM instrument using the shared hardware platform; SPinSynth-T-LCD uses Ricardo's own virtual analog synthesis engine. See the [project history](docs/PROJECT_HISTORY.md) for the timeline and release scope.
+
 ## Validated hardware baseline
 
 - Teensy 4.0 at 600 MHz
@@ -20,7 +36,7 @@ The 3.3 V LCD connects directly to Teensy pins 18 and 19. No I2C logic-level shi
 
 ![SPinSynth-T-LCD PCB, LCD and encoder assembly](docs/images/SPinSynth-T-LCD-Hardware.png)
 
-See [docs/HARDWARE.md](docs/HARDWARE.md) for pin assignments, controls, electrical details, and the history of the LCD, level-shifter, Audio Shield, and USB investigations.
+See [docs/hardware/HARDWARE.md](docs/hardware/HARDWARE.md) for pin assignments, controls, electrical details, and the history of the LCD, level-shifter, Audio Shield, and USB investigations.
 
 ## Features
 
@@ -33,6 +49,7 @@ See [docs/HARDWARE.md](docs/HARDWARE.md) for pin assignments, controls, electric
 - Portamento, pitch bend, velocity, master tuning, and master volume
 - USB MIDI plus 5-pin MIDI-DIN input
 - Simultaneous USB Audio and PJRC Audio Shield Rev D2 output
+- Stereo Freeverb with MIDI CC36 and HMI dry/wet control
 - 16x2 LCD and two-encoder parameter interface
 - Heartbeat, CrashReport, uptime, temperature, and startup I2C diagnostics
 
@@ -40,7 +57,7 @@ See [docs/HARDWARE.md](docs/HARDWARE.md) for pin assignments, controls, electric
 
 This release adds PJRC `AudioEffectFreeverbStereo` after the custom synth engine. MIDI CC **36** and the HMI **REVERB MIX** parameter set the dry/wet balance from 0–100%. Startup is fully dry; room size and damping are fixed at `0.5`. Both USB Audio and the Audio Shield receive the same stereo result.
 
-Factory presets and the on-demand parameter dump remain development work and are excluded from this release. See [release notes](docs/RELEASE_1.1.md).
+Factory presets and the on-demand parameter dump remain development work and are excluded from this release. See [release notes](docs/releases/RELEASE_1.1.md).
 
 The [hardware circuit diagram](docs/hardware/SPinSynth-T-LCD-Hardware.pdf) documents the shared SPinSynth hardware platform.
 
@@ -70,7 +87,9 @@ After startup, confirm LCD I2C address `0x27` and SGTL5000 address `0x0A` both r
 
 The production configuration completed a continuous test exceeding five hours with MIDI-DIN, USB Audio, Audio Shield audio, LCD/HMI, and heartbeat operating normally. CPU temperature reached 54.3 °C. After removal of temporary test code, the production build completed an additional ten-minute CAT with all functions correct at 57.5 °C on a 28 °C day.
 
-See [docs/TESTED_BASELINE.md](docs/TESTED_BASELINE.md) for the complete regression checklist.
+See [docs/cat/TESTED_BASELINE.md](docs/cat/TESTED_BASELINE.md) for the complete regression checklist.
+
+See the [documentation index](docs/README.md) for hardware, testing, history and release records.
 
 ## Repository layout
 
@@ -78,6 +97,10 @@ See [docs/TESTED_BASELINE.md](docs/TESTED_BASELINE.md) for the complete regressi
 SPinSynth-T-LCD/
 ├── README.md
 ├── docs/
+│   ├── hardware/   # wiring notes and circuit diagram
+│   ├── images/     # prototype, PCB and enclosure photos
+│   ├── cat/        # tested baseline and regression checklist
+│   └── releases/   # release notes
 └── SPinSynth-T-LCD/
     ├── SPinSynth-T-LCD.ino
     ├── SPinSynthAudio.*
