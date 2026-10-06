@@ -112,3 +112,11 @@ The production firmware retains lightweight diagnostics:
 - SGTL5000 I2C status at startup; status `0` indicates success
 
 Temporary continuous-tone, USB-only, and conditional HMI polling test paths were removed after validation.
+
+## PCB and enclosure documentation
+
+![Assembled instrument](images/SPinSynth-T-LCD-Housing.png)
+
+![PCB, display and encoders](images/SPinSynth-T-LCD-Hardware.png)
+
+[Circuit diagram](hardware/SPinSynth-T-LCD-Hardware.pdf). Photos supplied by Ricardo Peculis on 5 October 2026.

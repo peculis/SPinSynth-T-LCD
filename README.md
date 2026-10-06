@@ -12,11 +12,13 @@ SPinSynth-T-LCD is a monophonic software synthesizer for Teensy 4.0. It combines
 - Two quadrature rotary encoders with push-buttons
 - Isolated 5-pin MIDI-DIN input
 - USB configured as **Serial + MIDI + Audio**
-- Simultaneous stereo USB Audio and Audio Shield output carrying the mono synth signal
+- Simultaneous stereo USB Audio and Audio Shield output, including stereo reverb
 
 The 3.3 V LCD connects directly to Teensy pins 18 and 19. No I2C logic-level shifter is used. The LCD has no local pull-ups; the Audio Shield supplies 2.2 kΩ pull-ups to 3.3 V.
 
-![Validated SPinSynth-T-LCD hardware](docs/images/SPinSynth-T-LCD-03-Audio-Shield-and-LCD-3.3V.jpeg)
+![SPinSynth-T-LCD assembled in its housing](docs/images/SPinSynth-T-LCD-Housing.png)
+
+![SPinSynth-T-LCD PCB, LCD and encoder assembly](docs/images/SPinSynth-T-LCD-Hardware.png)
 
 See [docs/HARDWARE.md](docs/HARDWARE.md) for pin assignments, controls, electrical details, and the history of the LCD, level-shifter, Audio Shield, and USB investigations.
 
@@ -33,6 +35,14 @@ See [docs/HARDWARE.md](docs/HARDWARE.md) for pin assignments, controls, electric
 - Simultaneous USB Audio and PJRC Audio Shield Rev D2 output
 - 16x2 LCD and two-encoder parameter interface
 - Heartbeat, CrashReport, uptime, temperature, and startup I2C diagnostics
+
+## Stereo reverb release — V1.1
+
+This release adds PJRC `AudioEffectFreeverbStereo` after the custom synth engine. MIDI CC **36** and the HMI **REVERB MIX** parameter set the dry/wet balance from 0–100%. Startup is fully dry; room size and damping are fixed at `0.5`. Both USB Audio and the Audio Shield receive the same stereo result.
+
+Factory presets and the on-demand parameter dump remain development work and are excluded from this release. See [release notes](docs/RELEASE_1.1.md).
+
+The [hardware circuit diagram](docs/hardware/SPinSynth-T-LCD-Hardware.pdf) documents the shared SPinSynth hardware platform.
 
 ## Software dependencies
 
